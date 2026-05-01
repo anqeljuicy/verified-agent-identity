@@ -1,0 +1,48 @@
+name: Verify Human Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Nama AI Agent'
+        required: true
+        default: 'anqeljuicy'
+      agent_description:
+        description: 'Deskripsi AI Agent'
+        required: true
+        default: 'anqeljuicy AI Agent'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4 # Update ke v4 (lebih stabil & cepat)
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4 # Update ke v4
+        with:
+          node-version: '20'
+          cache: 'npm' # Menambah cache agar workflow lebih cepat
+          cache-dependency-path: './scripts/package-lock.json'
+
+      - name: Step 1 - Install ClawHub skill
+        run: npx clawhub@latest install verified-agent-identity
+
+      - name: Install script dependencies
+        run: |
+          cd scripts
+          if [ -f package.json ]; then
+            npm install
+          else
+            echo "Warning: package.json not found in scripts directory"
+          fi
+
+      - name: Step 2 - Create new Ethereum Identity
+        run: node scripts/createNewEthereumIdentity.js
+
+      - name: Step 3 - Link Human to Agent
+        # Menggunakan variable ${{ github.event.inputs... }} agar input yang dimasukkan user saat menjalankan workflow benar-benar terpakai
+        run: |
+          node scripts/manualLinkHumanToAgent.js --challenge "{\"name\": \"${{ github.event.inputs.agent_name }}\", \"description\": \"${{ github.event.inputs.agent_description }}\"}"
